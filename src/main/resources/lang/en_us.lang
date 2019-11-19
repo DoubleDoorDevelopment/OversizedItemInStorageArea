@@ -1,0 +1,11 @@
+oiisa.config.title=Oversized Item In Storage Area Config
+oiisa.config.message.eject=Eject Message
+oiisa.config.message.overheat=Overheat Message
+oiisa.config.message.location=Message Loaction
+oiisa.config.overheat.fire=Overheat Causes Fire
+oiisa.config.message.send=Notify Player
+oiisa.config.yeetitall=YEET IT BOI
+oiisa.config.debug=Debug Messages
+oiisa.config.maxsize=Maximum Size
+oiisa.config.overheat.temp=Overheat Tempature
+oiisa.config.allowed.inventories=Allowed Inventories

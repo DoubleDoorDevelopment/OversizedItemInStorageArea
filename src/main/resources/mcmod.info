@@ -1,0 +1,19 @@
+[
+  {
+    "modid": "OversizedItemInStorageArea",
+    "name": "OversizedItemInStorageArea",
+    "description": "TFC Size/Weight inventory limiting. #StopTheCheese",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "DoubleDoorDev",
+      "Claycorp"
+    ],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
