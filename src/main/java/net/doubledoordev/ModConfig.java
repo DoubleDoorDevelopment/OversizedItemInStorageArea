@@ -62,5 +62,6 @@ public class ModConfig
     {
         containerClassNames[0] = "net.dries007.tfc.objects.container.ContainerAnvilTFC";
         containerClassNames[1] = "net.dries007.tfc.objects.container.ContainerBarrel";
+        containerClassNames[2] = "net.dries007.tfc.objects.container.ContainerLogPile";
     }
 }
