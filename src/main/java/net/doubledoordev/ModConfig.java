@@ -44,14 +44,23 @@ public class ModConfig
     @Config.RangeInt(min = 0, max = Integer.MAX_VALUE)
     public static int startFire = 600;
 
+    @Config.LangKey("oiisa.config.allowed.slots")
+    @Config.Comment("DO NOT ENTER InventoryBasic SLOTS HERE! Full Class path names of slots that are excluded from the checks. TURN ON DEBUG TO GET THESE NAMES")
+    public static String[] slotClassNames = new String[3];
     @Config.LangKey("oiisa.config.allowed.inventories")
     @Config.Comment("Full Class path names of inventories that are excluded from the checks. TURN ON DEBUG TO GET THESE NAMES")
-    public static String[] classNames = new String[3];
+    public static String[] containerClassNames = new String[3];
 
     static
     {
-        classNames[0] = "net.minecraft.entity.player.InventoryPlayer";
-        classNames[1] = "net.minecraft.inventory.InventoryCrafting";
-        classNames[2] = "net.minecraft.inventory.InventoryCraftResult";
+        slotClassNames[0] = "net.minecraft.entity.player.InventoryPlayer";
+        slotClassNames[1] = "net.minecraft.inventory.InventoryCrafting";
+        slotClassNames[2] = "net.minecraft.inventory.InventoryCraftResult";
+    }
+
+    static
+    {
+        containerClassNames[0] = "net.dries007.tfc.objects.container.ContainerAnvilTFC";
+        containerClassNames[1] = "net.dries007.tfc.objects.container.ContainerBarrel";
     }
 }

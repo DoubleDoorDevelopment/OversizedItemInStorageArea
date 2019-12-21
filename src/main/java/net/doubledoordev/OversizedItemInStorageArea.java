@@ -40,7 +40,7 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2019.2-1.3.1-155";
+    public static final String VERSION = "1.1.0";
     /**
      * This is the instance of your mod as created by Forge. It will never be null.
      */
@@ -77,129 +77,142 @@ public class OversizedItemInStorageArea
         RayTraceResult rayTrace = null;
         EntityPlayer player = event.getEntityPlayer();
         World world = player.getEntityWorld();
-        ArrayList<String> betterClassNameList = new ArrayList<>(Arrays.asList(ModConfig.classNames));
+        ArrayList<String> betterSlotClassNameList = new ArrayList<>(Arrays.asList(ModConfig.slotClassNames));
+        ArrayList<String> betterContainerClassNameList = new ArrayList<>(Arrays.asList(ModConfig.containerClassNames));
         ArrayList<Slot> slotsToEffect = new ArrayList<>();
 
-        // Check over every slot inside the inventory to get the slots we want to mess with.
-        for (Slot slot : container.inventorySlots)
+        // simple debug to get container class names.
+        if (ModConfig.debug)
         {
-            // simple debug to get the class names.
-            if (ModConfig.debug)
-            {
-                log.info(slot.inventory.getClass());
-            }
-
-            //If our list doesn't contain this slots class, we want to add it to the list of things to be burned or yeeted.
-            if (!betterClassNameList.contains(slot.inventory.getClass().getName()))
-                slotsToEffect.add(slot);
+            log.info(container.getClass());
         }
 
-        //Loop over each slot that needs to be effected.
-        for (Slot slot : slotsToEffect)
+        //check the container as lots of slots in mods are the same general slot.
+        if (!betterContainerClassNameList.contains(container.getClass().getName()))
         {
-            // make sure our slot has a stack.
-            if (slot.getHasStack())
+            //Remove this entry if people put it in cause a shit ton of stuff uses this.
+            betterSlotClassNameList.remove("net.minecraft.inventory.InventoryBasic");
+            // Check over every slot inside the inventory to get the slots we want to mess with.
+            for (Slot slot : container.inventorySlots)
             {
-                // get the stack from the slot.
-                ItemStack stack = slot.getStack();
-                ItemStack stackHolder = stack.copy();
-                // get the ItemSize capability that holds the Size & Weight of the item.
-                IItemSize size = CapabilityItemSize.getIItemSize(stack);
-                // raytraced blockpos.
-                BlockPos tracedPos = null;
-                // hold our heat here, it's not guaranteed thus we need to be careful.
-                IItemHeat heatCapability = null;
-
-                // Get the heat of an item if it has it.
-                if (stack.hasCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null))
+                // simple debug to get the slot class names.
+                if (ModConfig.debug)
                 {
-                    // store the heat cap because we have one
-                    heatCapability = stack.getCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null);
+                    log.info(slot.inventory.getClass());
                 }
 
-                // see if we already have a raytrace result so we don't waist time on it or get another result because the player was pushed.
-                if (rayTrace == null)
-                {
-                    // do the raytrace
-                    rayTrace = Helpers.rayTrace(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1);
-                }
+                //If our list doesn't contain this slots class, we want to add it to the list of things to be burned or yeeted.
+                if (!betterSlotClassNameList.contains(slot.inventory.getClass().getName()))
+                    slotsToEffect.add(slot);
+            }
 
-                // if the raytrace isn't null we have a block to "eject" from
-                if (rayTrace != null && rayTrace.typeOfHit != RayTraceResult.Type.MISS)
+            //Loop over each slot that needs to be effected.
+            for (Slot slot : slotsToEffect)
+            {
+                // make sure our slot has a stack.
+                if (slot.getHasStack())
                 {
-                    // block pos of our traced target.
-                    tracedPos = rayTrace.getBlockPos();
-                }
+                    // get the stack from the slot.
+                    ItemStack stack = slot.getStack();
+                    ItemStack stackHolder = stack.copy();
+                    // get the ItemSize capability that holds the Size & Weight of the item.
+                    IItemSize size = CapabilityItemSize.getIItemSize(stack);
+                    // raytraced blockpos.
+                    BlockPos tracedPos = null;
+                    // hold our heat here, it's not guaranteed thus we need to be careful.
+                    IItemHeat heatCapability = null;
 
-                // if we should do overheat stuff, Needs to be enabled, Traced pos needs to be valid, It needs to be a TE, The item needs a valid heatcap and the temp needs to be high enough.
-                if (ModConfig.overheatStartsFires && tracedPos != null && world.getTileEntity(tracedPos) != null && heatCapability != null && heatCapability.getTemperature() >= ModConfig.startFire)
-                {
-                    // get the blockstate at the pos location
-                    IBlockState target = world.getBlockState(tracedPos);
-                    // make sure we have a heat cap to work with before getting the temperature and checking it against the cap.
-                    if (target.getMaterial().getCanBurn())
+                    // Get the heat of an item if it has it.
+                    if (stack.hasCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null))
                     {
-                        // if we went over temp incinerate the block.
-                        world.setBlockState(tracedPos, Blocks.FIRE.getDefaultState());
-                        // notify the smart person that did this if needed.
+                        // store the heat cap because we have one
+                        heatCapability = stack.getCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null);
+                    }
+
+                    // see if we already have a raytrace result so we don't waist time on it or get another result because the player was pushed.
+                    if (rayTrace == null)
+                    {
+                        // do the raytrace
+                        rayTrace = Helpers.rayTrace(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1);
+                    }
+
+                    // if the raytrace isn't null we have a block to "eject" from
+                    if (rayTrace != null && rayTrace.typeOfHit != RayTraceResult.Type.MISS)
+                    {
+                        // block pos of our traced target.
+                        tracedPos = rayTrace.getBlockPos();
+                    }
+
+                    // if we should do overheat stuff, Needs to be enabled, Traced pos needs to be valid, It needs to be a TE, The item needs a valid heatcap and the temp needs to be high enough.
+                    if (ModConfig.overheatStartsFires && tracedPos != null && world.getTileEntity(tracedPos) != null && heatCapability != null && heatCapability.getTemperature() >= ModConfig.startFire)
+                    {
+                        // get the blockstate at the pos location
+                        IBlockState target = world.getBlockState(tracedPos);
+                        // make sure we have a heat cap to work with before getting the temperature and checking it against the cap.
+                        if (target.getMaterial().getCanBurn())
+                        {
+                            // if we went over temp incinerate the block.
+                            world.setBlockState(tracedPos, Blocks.FIRE.getDefaultState());
+                            // notify the smart person that did this if needed.
+                            if (ModConfig.shouldNotifyPlayer)
+                                player.sendStatusMessage(new TextComponentString(ModConfig.overheatMessage), ModConfig.sendMessageToActionBar);
+                        }
+                    }
+                    // Check the size listed on the item.
+                    if (size.getSize(stack).ordinal() >= ModConfig.maxSize)
+                    {
+                        // Check to see if our pos is valid and then if our block has a TE otherwise the player isn't looking in a block.
+                        if (tracedPos != null && world.getTileEntity(tracedPos) != null)
+                        {
+                            // check to see if everything should be dumped.
+                            if (ModConfig.yeetItAll)
+                            {
+                                // if it all needs to be dumped, dump only the slots we should be dealing with.
+                                for (Slot yeetableStack : slotsToEffect)
+                                {
+                                    // make sure we have a stack to work with first.
+                                    if (yeetableStack.getHasStack())
+                                    {
+                                        yeetItem(world, tracedPos, yeetableStack.getStack());
+                                        yeetableStack.getStack().setCount(0);
+                                    }
+                                }
+                            }
+                            //otherwise drop only one.
+                            else
+                            {
+                                yeetItem(world, tracedPos, stackHolder);
+                                stack.setCount(0);
+                            }
+                        }
+                        // spawn the item on the player if it's not a TE
+                        else
+                        {
+                            // check if we need to yeet it all.
+                            if (ModConfig.yeetItAll && tracedPos != null)
+                            {
+                                // if it all needs to be dumped, dump only the slots we should be dealing with.
+                                for (Slot yeetableStack : slotsToEffect)
+                                {
+                                    // make sure we have a stack to work with first.
+                                    if (yeetableStack.getHasStack())
+                                    {
+                                        yeetItem(world, tracedPos, yeetableStack.getStack());
+                                        yeetableStack.getStack().setCount(0);
+                                    }
+                                }
+                            }
+                            //otherwise just yet the problem item.
+                            else
+                            {
+                                yeetItem(world, player.getPosition(), stackHolder);
+                                stack.setCount(0);
+                            }
+                        }
+                        // tell the player about what it if configured to.
                         if (ModConfig.shouldNotifyPlayer)
-                            player.sendStatusMessage(new TextComponentString(ModConfig.overheatMessage), ModConfig.sendMessageToActionBar);
+                            player.sendStatusMessage(new TextComponentString(ModConfig.ejectMessage), ModConfig.sendMessageToActionBar);
                     }
-                }
-                // Check the size listed on the item.
-                if (size.getSize(stack).ordinal() >= ModConfig.maxSize)
-                {
-                    // Check to see if our pos is valid and then if our block has a TE otherwise the player isn't looking in a block.
-                    if (tracedPos != null && world.getTileEntity(tracedPos) != null)
-                    {
-                        // check to see if everything should be dumped.
-                        if (ModConfig.yeetItAll)
-                        {
-                            // if it all needs to be dumped, dump only the slots we should be dealing with.
-                            for (Slot yeetableStack : slotsToEffect)
-                            {
-                                // make sure we have a stack to work with first.
-                                if (yeetableStack.getHasStack())
-                                {
-                                    yeetItem(world, tracedPos, yeetableStack.getStack());
-                                    yeetableStack.getStack().setCount(0);
-                                }
-                            }
-                        }
-                        //otherwise drop only one.
-                        else
-                        {
-                            yeetItem(world, tracedPos, stackHolder);
-                            stack.setCount(0);
-                        }
-                    }
-                    // spawn the item on the player if it's not a TE
-                    else
-                    {
-                        // check if we need to yeet it all.
-                        if (ModConfig.yeetItAll && tracedPos != null)
-                        {
-                            // if it all needs to be dumped, dump only the slots we should be dealing with.
-                            for (Slot yeetableStack : slotsToEffect)
-                            {
-                                // make sure we have a stack to work with first.
-                                if (yeetableStack.getHasStack())
-                                {
-                                    yeetItem(world, tracedPos, yeetableStack.getStack());
-                                    yeetableStack.getStack().setCount(0);
-                                }
-                            }
-                        }
-                        //otherwise just yet the problem item.
-                        else
-                        {
-                            yeetItem(world, player.getPosition(), stackHolder);
-                            stack.setCount(0);
-                        }
-                    }
-                    // tell the player about what it if configured to.
-                    if (ModConfig.shouldNotifyPlayer)
-                        player.sendStatusMessage(new TextComponentString(ModConfig.ejectMessage), ModConfig.sendMessageToActionBar);
                 }
             }
         }
