@@ -90,8 +90,12 @@ public class OversizedItemInStorageArea
         //check the container as lots of slots in mods are the same general slot.
         if (!betterContainerClassNameList.contains(container.getClass().getName()))
         {
-            //Remove this entry if people put it in cause a shit ton of stuff uses this.
-            betterSlotClassNameList.remove("net.minecraft.inventory.InventoryBasic");
+            //Remove this entry if people put it in cause a shit ton of stuff uses this and warn them.
+            if (betterSlotClassNameList.remove("net.minecraft.inventory.InventoryBasic"))
+            {
+                log.warn("Ignoring basic slot! DON'T PUT \"net.minecraft.inventory.InventoryBasic\" IN YOUR CONFIG, LIKE THE CONFIG SAYS! THIS IS NOT A BUG!");
+            }
+
             // Check over every slot inside the inventory to get the slots we want to mess with.
             for (Slot slot : container.inventorySlots)
             {

@@ -47,9 +47,10 @@ public class ModConfig
     @Config.LangKey("oiisa.config.allowed.slots")
     @Config.Comment("DO NOT ENTER InventoryBasic SLOTS HERE! Full Class path names of slots that are excluded from the checks. TURN ON DEBUG TO GET THESE NAMES")
     public static String[] slotClassNames = new String[3];
+
     @Config.LangKey("oiisa.config.allowed.inventories")
     @Config.Comment("Full Class path names of inventories that are excluded from the checks. TURN ON DEBUG TO GET THESE NAMES")
-    public static String[] containerClassNames = new String[3];
+    public static String[] containerClassNames = new String[8];
 
     static
     {
@@ -60,8 +61,15 @@ public class ModConfig
 
     static
     {
+        //TFC containers
         containerClassNames[0] = "net.dries007.tfc.objects.container.ContainerAnvilTFC";
         containerClassNames[1] = "net.dries007.tfc.objects.container.ContainerBarrel";
         containerClassNames[2] = "net.dries007.tfc.objects.container.ContainerLogPile";
+        containerClassNames[3] = "net.dries007.tfc.objects.container.ContainerQuern";
+        containerClassNames[4] = "net.dries007.tfc.objects.container.ContainerFirePit";
+        containerClassNames[5] = "net.dries007.tfc.objects.container.ContainerCharcoalForge";
+        containerClassNames[6] = "net.dries007.tfc.objects.container.ContainerCrucible";
+        //FTB Utils containers
+        containerClassNames[7] = "com.feed_the_beast.ftbutilities.command.InvSeeInventory";
     }
 }
