@@ -44,6 +44,10 @@ public class ModConfig
     @Config.RangeInt(min = 0, max = Integer.MAX_VALUE)
     public static int startFire = 600;
 
+    @Config.LangKey("oiisa.config.blacklist")
+    @Config.Comment("Changes the default checks from whitelist to blacklist. True = Config allowed inventory, False = Config blocked inventory.")
+    public static Boolean blacklist = false;
+
     @Config.LangKey("oiisa.config.allowed.slots")
     @Config.Comment("DO NOT ENTER InventoryBasic SLOTS HERE! Full Class path names of slots that are excluded from the checks. TURN ON DEBUG TO GET THESE NAMES")
     public static String[] slotClassNames = new String[3];
