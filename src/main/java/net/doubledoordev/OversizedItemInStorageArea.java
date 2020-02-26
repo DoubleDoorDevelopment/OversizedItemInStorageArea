@@ -2,6 +2,10 @@ package net.doubledoordev;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
 import net.minecraft.block.state.IBlockState;
@@ -16,10 +20,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Config;
-import net.minecraftforge.common.config.ConfigManager;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
-import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -27,7 +28,6 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.dries007.tfc.api.capability.heat.CapabilityItemHeat;
 import net.dries007.tfc.api.capability.heat.IItemHeat;
 import net.dries007.tfc.api.capability.size.CapabilityItemSize;
-import net.dries007.tfc.api.capability.size.IItemSize;
 import net.dries007.tfc.util.Helpers;
 
 @Mod(
@@ -40,7 +40,13 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "1.2.0";
+    public static final String VERSION = "2.0.0";
+
+    private static Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
+
+    Map<String, Integer> weightMap = new HashMap<>();
+    Map<String, Integer> containerSizeOverideMap = new HashMap<>();
+
     /**
      * This is the instance of your mod as created by Forge. It will never be null.
      */
@@ -57,14 +63,31 @@ public class OversizedItemInStorageArea
     {
         log = event.getModLog();
         MinecraftForge.EVENT_BUS.register(this);
+        splitConfig();
     }
 
-    @SubscribeEvent
-    public void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event)
+    //Why the config thing didn't support maps beats me... yay bullshit!
+    public void splitShit(String[] configInput, Map<String, Integer> outputSave)
     {
-        if (event.getModID().equals(MOD_ID))
+        ArrayList<String> array = new ArrayList<>();
+        String key;
+        if (configInput.length > 0)
         {
-            ConfigManager.sync(MOD_ID, Config.Type.INSTANCE);
+            for (String configEntry : configInput)
+            {
+                Matcher matcher = splitter.matcher(configEntry);
+                while (matcher.find())
+                {
+                    array.add(matcher.group().trim());
+                }
+                if (!array.isEmpty())
+                {
+                    key = array.get(0);
+                    array.remove(0);
+                    outputSave.put(key, Integer.valueOf(array.get(0)));
+                    array.clear();
+                }
+            }
         }
     }
 
@@ -73,32 +96,288 @@ public class OversizedItemInStorageArea
     {
         // Our inventory we are working with.
         Container container = event.getContainer();
-        // raytrace to get the block the user is looking at.
-        RayTraceResult rayTrace = null;
         EntityPlayer player = event.getEntityPlayer();
         World world = player.getEntityWorld();
-        ArrayList<String> betterSlotClassNameList = new ArrayList<>(Arrays.asList(ModConfig.slotClassNames));
-        ArrayList<String> betterContainerClassNameList = new ArrayList<>(Arrays.asList(ModConfig.containerClassNames));
+        String containerName = container.getClass().getName();
+
+        // raytrace to get the block the user is looking at.
+        BlockPos tracedPos = getTracedPos(Helpers.rayTrace(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1));
+        ArrayList<String> slotClassNameList = new ArrayList<>(Arrays.asList(ModConfig.slotClassNames));
+        ArrayList<String> containerClassNameList = new ArrayList<>(Arrays.asList(ModConfig.sizeLimitOptions.sizeContainers));
+        ArrayList<String> blockedItemNameList = new ArrayList<>(Arrays.asList(ModConfig.ignoredItems));
         ArrayList<Slot> slotsToEffect = new ArrayList<>();
+        int maxSize = ModConfig.sizeLimitOptions.maxSize;
 
-        // simple debug to get container class names.
-        if (ModConfig.debug)
+        // Removes unwanted entries in the slot list.
+        cleanSlotList(container, slotClassNameList, slotsToEffect, containerName);
+
+        //Look for items that should start fires.
+        checkItemHeat(tracedPos, world, slotsToEffect, player, blockedItemNameList);
+
+        // Checks what mode the size list is in.
+        if (ModConfig.sizeLimitOptions.sizeWhitelist)
         {
-            log.info(container.getClass());
+            // If the list contains the name enforce the size restriction.
+            if (containerClassNameList.contains(containerName))
+            {
+                // Check the size.
+                doSizeCheck(player, world, containerName, tracedPos, blockedItemNameList, slotsToEffect, maxSize);
+            }
+        }
+        // If the list doesn't contain the name as we are in blacklist mode.
+        else if (!containerClassNameList.contains(containerName))
+        {
+            // Check the size.
+            doSizeCheck(player, world, containerName, tracedPos, blockedItemNameList, slotsToEffect, maxSize);
         }
 
-        //check the container as lots of slots in mods are the same general slot.
-        if (!ModConfig.blacklist && !betterContainerClassNameList.contains(container.getClass().getName()))
+        // See if the inventory needs a size applied to it.
+        if (INSTANCE.weightMap.containsKey(containerName))
         {
-            checkEverything(container, betterSlotClassNameList, rayTrace, slotsToEffect, player, world);
-        }
-        else if (betterContainerClassNameList.contains(container.getClass().getName()))
-        {
-            checkEverything(container, betterSlotClassNameList, rayTrace, slotsToEffect, player, world);
+            // The items that exceed the weight limit.
+            ArrayList<Slot> overWeightItems = checkWeight(slotsToEffect, containerName, blockedItemNameList);
+
+            // Config check
+            if (ModConfig.weightLimitOptions.weightYeetItAll)
+            {
+                // make sure the array isn't empty
+                if (!overWeightItems.isEmpty())
+                {
+                    // Drop it all
+                    yeetAll(slotsToEffect, world, tracedPos);
+
+                    // tell the player about what it if configured to.
+                    if (ModConfig.weightLimitOptions.weightNotifyPlayer)
+                        player.sendStatusMessage(new TextComponentString(ModConfig.weightLimitOptions.weightEjectMessage), ModConfig.weightLimitOptions.weightActionBarMessage);
+                }
+            }
+            else
+            {
+                // make sure the array isn't empty
+                if (!overWeightItems.isEmpty())
+                {
+                    // drop only the items that are over the weight limit.
+                    for (Slot yeetThisSlot : overWeightItems)
+                    {
+                        yeetItem(world, tracedPos, yeetThisSlot);
+
+                        // tell the player about what it if configured to.
+                        if (ModConfig.weightLimitOptions.weightNotifyPlayer)
+                            player.sendStatusMessage(new TextComponentString(ModConfig.weightLimitOptions.weightEjectMessage), ModConfig.weightLimitOptions.weightActionBarMessage);
+                    }
+                }
+            }
         }
     }
 
-    private void yeetItem(World world, BlockPos pos, ItemStack item)
+    void splitConfig()
+    {
+        splitShit(ModConfig.weightLimitOptions.weightInventoryArray, weightMap);
+        splitShit(ModConfig.sizeLimitOptions.sizeInventoryArray, containerSizeOverideMap);
+    }
+
+    private void doSizeCheck(EntityPlayer player, World world, String containerName, BlockPos tracedPos, ArrayList<String> blockedItemNameList, ArrayList<Slot> slotsToEffect, int maxSize)
+    {
+        // If the config overrides the default with a special level...
+        if (INSTANCE.containerSizeOverideMap.containsKey(containerName))
+        {
+            // change it to match that override.
+            maxSize = INSTANCE.containerSizeOverideMap.get(containerName);
+        }
+        // Do the check of size and heat.
+        checkSize(slotsToEffect, tracedPos, world, player, maxSize, blockedItemNameList);
+    }
+
+    private void checkSize(ArrayList<Slot> slotsToEffect, BlockPos tracedPos, World world, EntityPlayer player, int maxSize, ArrayList<String> blockedItemNameList)
+    {
+        //Loop over each slot that needs to be acted on.
+        for (Slot slot : slotsToEffect)
+        {
+            // make sure our slot has a stack.
+            if (slot.getHasStack() && !blockedItemNameList.contains(slot.getStack().getItem().getRegistryName().toString()))
+            {
+                // get the stack from the slot.
+                ItemStack stackToActOn = slot.getStack();
+                // get the ItemSize capability that holds the Size & Weight of the item.
+                int size = CapabilityItemSize.getIItemSize(stackToActOn).getSize(stackToActOn).ordinal();
+
+                // Check the size listed on the item.
+                if (size >= maxSize)
+                {
+                    doYeet(tracedPos, world, slotsToEffect, slot, ModConfig.sizeLimitOptions.sizeYeetItAll, player);
+
+                    // tell the player about what it if configured to.
+                    if (ModConfig.sizeLimitOptions.sizeNotifyPlayer)
+                        player.sendStatusMessage(new TextComponentString(ModConfig.sizeLimitOptions.sizeEjectMessage), ModConfig.sizeLimitOptions.sizeActionBarMessage);
+                }
+            }
+        }
+    }
+
+    private ArrayList<Slot> checkWeight(ArrayList<Slot> slotsToEffect, String containerName, ArrayList<String> blockedItemNameList)
+    {
+        int currentWeight = 0;
+        int maxWeight = INSTANCE.weightMap.get(containerName);
+        ArrayList<Slot> toYeet = new ArrayList<>();
+
+        //Loop over the slots to effect.
+        for (Slot slot : slotsToEffect)
+        {
+            // Make sure each slot has an item and isn't a blocked one.
+            if (slot.getHasStack() && !blockedItemNameList.contains(slot.getStack().getItem().getRegistryName().toString()))
+            {
+                ItemStack itemStack = slot.getStack();
+                //Get the weight based off the config and add it to the current weight.
+                if (currentWeight < maxWeight)
+                {
+                    switch (CapabilityItemSize.getIItemSize(slot.getStack()).getWeight(itemStack).ordinal())
+                    {
+                        case 0:
+                            currentWeight = ModConfig.weightLimitOptions.lightItemWeight * itemStack.getCount() + currentWeight;
+                            break;
+                        case 1:
+                            currentWeight = ModConfig.weightLimitOptions.mediumItemWeight * itemStack.getCount() + currentWeight;
+                            break;
+                        case 2:
+                            currentWeight = ModConfig.weightLimitOptions.heavyItemWeight * itemStack.getCount() + currentWeight;
+                    }
+                }
+                else
+                    toYeet.add(slot);
+            }
+        }
+        if (ModConfig.debugOptions.debug && ModConfig.debugOptions.weightDebug)
+        {
+            log.info("Total Weight of Container: " + currentWeight + " Maximum weight allowed: " + maxWeight);
+        }
+        return toYeet;
+    }
+
+    private void cleanSlotList(Container container, ArrayList<String> slotClassNameList, ArrayList<Slot> slotsToEffect, String containerName)
+    {
+        //Remove this entry if people put it in cause a shit ton of stuff uses this and warn them.
+        if (slotClassNameList.remove("net.minecraft.inventory.InventoryBasic"))
+        {
+            log.warn("Ignoring basic slot! DON'T PUT \"net.minecraft.inventory.InventoryBasic\" IN YOUR CONFIG, LIKE THE CONFIG SAYS! THIS IS NOT A BUG!");
+        }
+
+        // simple debug to get the container class name.
+        if (ModConfig.debugOptions.debug)
+        {
+            log.info(containerName);
+        }
+
+        // Check over every slot inside the inventory to get the slots we want to mess with.
+        for (Slot slot : container.inventorySlots)
+        {
+
+            // simple debug to get the slot class names.
+            if (ModConfig.debugOptions.debug && ModConfig.debugOptions.slotDebug)
+            {
+                log.info(slot.inventory.getClass());
+            }
+
+            //If the blacklist list doesn't contain this slot class, we want to add it to the list of things to be burned or yeeted.
+            if (!slotClassNameList.contains(slot.inventory.getClass().getName()))
+                slotsToEffect.add(slot);
+        }
+    }
+
+    private void yeetItem(World world, BlockPos tracedPos, Slot yeetslot)
+    {
+        spawnYeetItem(world, tracedPos, yeetslot.getStack());
+        yeetslot.getStack().setCount(0);
+        yeetslot.inventory.markDirty();
+    }
+
+    private void yeetAll(ArrayList<Slot> slotsToEffect, World world, BlockPos tracedPos)
+    {
+        // if it all needs to be dumped, dump only the slots we should be dealing with.
+        for (Slot slotToYeet : slotsToEffect)
+        {
+            // make sure we have a stack to work with first.
+            if (slotToYeet.getHasStack())
+            {
+                yeetItem(world, tracedPos, slotToYeet);
+            }
+        }
+    }
+
+    private void doYeet(BlockPos tracedPos, World world, ArrayList<Slot> slotsToEffect, Slot yeetslot, Boolean selectiveYeet, EntityPlayer player)
+    {
+        // Check to see if our pos is valid and then if our block has a TE otherwise the player isn't looking in a block.
+        if (tracedPos != null && world.getTileEntity(tracedPos) != null)
+        {
+            if (selectiveYeet)
+                yeetItem(world, tracedPos, yeetslot);
+            else
+                yeetAll(slotsToEffect, world, tracedPos);
+        }
+        // spawn the item on the player if it's not a TE
+        else
+        {
+            if (selectiveYeet)
+                yeetItem(world, player.getPosition(), yeetslot);
+            else
+                yeetAll(slotsToEffect, world, player.getPosition());
+        }
+    }
+
+    private BlockPos getTracedPos(RayTraceResult rayTrace)
+    {
+        // if the raytrace isn't null & we have a block to "eject" from
+        if (rayTrace != null && rayTrace.typeOfHit != RayTraceResult.Type.MISS)
+        {
+            // block pos of our traced target.
+            return rayTrace.getBlockPos();
+        }
+        return null;
+    }
+
+    private void checkItemHeat(BlockPos tracedPos, World world, ArrayList<Slot> slotsToEffect, EntityPlayer player, ArrayList<String> blockedItemNameList)
+    {
+        if (ModConfig.overheatOptions.heatStartsFires)
+        {
+            //Loop over the slots.
+            for (Slot slot : slotsToEffect)
+            {
+                //If the stack has a heat capability and isn't on the ignore list we can get the cap off the item and check the heat.
+                if (slot.getStack().hasCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null) && !blockedItemNameList.contains(slot.getStack().getItem().getRegistryName().toString()))
+                {
+                    IItemHeat heatCapability = slot.getStack().getCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null);
+
+                    // if we should do overheat stuff, Needs to be enabled, Traced pos needs to be valid, It needs to be a TE, The item needs a valid heatcap and the temp needs to be high enough.
+                    if (tracedPos != null && world.getTileEntity(tracedPos) != null && heatCapability != null && heatCapability.getTemperature() >= ModConfig.overheatOptions.heatToStartFire)
+                    {
+                        if (ModConfig.debugOptions.debug && ModConfig.debugOptions.heatDebug)
+                        {
+                            log.info("Current Item Temperature: " + heatCapability.getTemperature() + " Maximum Temperature allowed: " + ModConfig.overheatOptions.heatToStartFire);
+                        }
+                        // get the blockstate at the pos location
+                        IBlockState target = world.getBlockState(tracedPos);
+                        // Does the material burn at this location?
+                        if (target.getMaterial().getCanBurn())
+                        {
+                            // if we went over temp incinerate the block.
+                            world.setBlockState(tracedPos, Blocks.FIRE.getDefaultState());
+                            // notify the smart person that did this if needed.
+                            if (ModConfig.overheatOptions.heatNotifyPlayer)
+                                player.sendStatusMessage(new TextComponentString(ModConfig.overheatOptions.heatMessage), ModConfig.overheatOptions.heatActionBarMessage);
+                        }
+                        else
+                        {
+                            if (ModConfig.debugOptions.debug && ModConfig.debugOptions.heatDebug)
+                            {
+                                log.info("Fire was aborted as this block can't burn.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void spawnYeetItem(World world, BlockPos pos, ItemStack item)
     {
         float f = world.rand.nextFloat() * 0.8F + 0.1F;
         float f1 = world.rand.nextFloat() * 0.8F + 0.1F;
@@ -113,142 +392,5 @@ public class OversizedItemInStorageArea
         entityitem.motionZ = world.rand.nextGaussian() * 0.07D;
         // Spawn the entity with the constructed Entityitem.
         world.spawnEntity(entityitem);
-    }
-
-    private void checkEverything(Container container, ArrayList<String> betterSlotClassNameList, RayTraceResult rayTrace, ArrayList<Slot> slotsToEffect, EntityPlayer player, World world)
-    {
-        //Remove this entry if people put it in cause a shit ton of stuff uses this and warn them.
-        if (betterSlotClassNameList.remove("net.minecraft.inventory.InventoryBasic"))
-        {
-            log.warn("Ignoring basic slot! DON'T PUT \"net.minecraft.inventory.InventoryBasic\" IN YOUR CONFIG, LIKE THE CONFIG SAYS! THIS IS NOT A BUG!");
-        }
-
-        // Check over every slot inside the inventory to get the slots we want to mess with.
-        for (Slot slot : container.inventorySlots)
-        {
-            // simple debug to get the slot class names.
-            if (ModConfig.debug)
-            {
-                log.info(slot.inventory.getClass());
-            }
-
-            //If our list doesn't contain this slots class, we want to add it to the list of things to be burned or yeeted.
-            if (!betterSlotClassNameList.contains(slot.inventory.getClass().getName()))
-                slotsToEffect.add(slot);
-        }
-
-        //Loop over each slot that needs to be effected.
-        for (Slot slot : slotsToEffect)
-        {
-            // make sure our slot has a stack.
-            if (slot.getHasStack())
-            {
-                // get the stack from the slot.
-                ItemStack stack = slot.getStack();
-                ItemStack stackHolder = stack.copy();
-                // get the ItemSize capability that holds the Size & Weight of the item.
-                IItemSize size = CapabilityItemSize.getIItemSize(stack);
-                // raytraced blockpos.
-                BlockPos tracedPos = null;
-                // hold our heat here, it's not guaranteed thus we need to be careful.
-                IItemHeat heatCapability = null;
-
-                // Get the heat of an item if it has it.
-                if (stack.hasCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null))
-                {
-                    // store the heat cap because we have one
-                    heatCapability = stack.getCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null);
-                }
-
-                // see if we already have a raytrace result so we don't waist time on it or get another result because the player was pushed.
-                if (rayTrace == null)
-                {
-                    // do the raytrace
-                    rayTrace = Helpers.rayTrace(player, player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue(), 1);
-                }
-
-                // if the raytrace isn't null we have a block to "eject" from
-                if (rayTrace != null && rayTrace.typeOfHit != RayTraceResult.Type.MISS)
-                {
-                    // block pos of our traced target.
-                    tracedPos = rayTrace.getBlockPos();
-                }
-
-                // if we should do overheat stuff, Needs to be enabled, Traced pos needs to be valid, It needs to be a TE, The item needs a valid heatcap and the temp needs to be high enough.
-                if (ModConfig.overheatStartsFires && tracedPos != null && world.getTileEntity(tracedPos) != null && heatCapability != null && heatCapability.getTemperature() >= ModConfig.startFire)
-                {
-                    // get the blockstate at the pos location
-                    IBlockState target = world.getBlockState(tracedPos);
-                    // make sure we have a heat cap to work with before getting the temperature and checking it against the cap.
-                    if (target.getMaterial().getCanBurn())
-                    {
-                        // if we went over temp incinerate the block.
-                        world.setBlockState(tracedPos, Blocks.FIRE.getDefaultState());
-                        // notify the smart person that did this if needed.
-                        if (ModConfig.shouldNotifyPlayer)
-                            player.sendStatusMessage(new TextComponentString(ModConfig.overheatMessage), ModConfig.sendMessageToActionBar);
-                    }
-                }
-                // Check the size listed on the item.
-                if (size.getSize(stack).ordinal() >= ModConfig.maxSize)
-                {
-                    // Check to see if our pos is valid and then if our block has a TE otherwise the player isn't looking in a block.
-                    if (tracedPos != null && world.getTileEntity(tracedPos) != null)
-                    {
-                        // check to see if everything should be dumped.
-                        if (ModConfig.yeetItAll)
-                        {
-                            // if it all needs to be dumped, dump only the slots we should be dealing with.
-                            for (Slot yeetableStack : slotsToEffect)
-                            {
-                                // make sure we have a stack to work with first.
-                                if (yeetableStack.getHasStack())
-                                {
-                                    yeetItem(world, tracedPos, yeetableStack.getStack());
-                                    yeetableStack.getStack().setCount(0);
-                                    slot.inventory.markDirty();
-                                }
-                            }
-                        }
-                        //otherwise drop only one.
-                        else
-                        {
-                            yeetItem(world, tracedPos, stackHolder);
-                            stack.setCount(0);
-                            slot.inventory.markDirty();
-                        }
-                    }
-                    // spawn the item on the player if it's not a TE
-                    else
-                    {
-                        // check if we need to yeet it all.
-                        if (ModConfig.yeetItAll && tracedPos != null)
-                        {
-                            // if it all needs to be dumped, dump only the slots we should be dealing with.
-                            for (Slot yeetableStack : slotsToEffect)
-                            {
-                                // make sure we have a stack to work with first.
-                                if (yeetableStack.getHasStack())
-                                {
-                                    yeetItem(world, tracedPos, yeetableStack.getStack());
-                                    yeetableStack.getStack().setCount(0);
-                                    slot.inventory.markDirty();
-                                }
-                            }
-                        }
-                        //otherwise just yet the problem item.
-                        else
-                        {
-                            yeetItem(world, player.getPosition(), stackHolder);
-                            stack.setCount(0);
-                            slot.inventory.markDirty();
-                        }
-                    }
-                    // tell the player about what it if configured to.
-                    if (ModConfig.shouldNotifyPlayer)
-                        player.sendStatusMessage(new TextComponentString(ModConfig.ejectMessage), ModConfig.sendMessageToActionBar);
-                }
-            }
-        }
     }
 }

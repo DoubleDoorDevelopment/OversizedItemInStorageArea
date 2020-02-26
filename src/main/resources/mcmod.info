@@ -1,6 +1,6 @@
 [
   {
-    "modid": "OversizedItemInStorageArea",
+    "modid": "oversizediteminstoragearea",
     "name": "OversizedItemInStorageArea",
     "description": "TFC Size/Weight inventory limiting. #StopTheCheese",
     "version": "${version}",

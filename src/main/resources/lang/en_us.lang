@@ -1,11 +1,33 @@
 oiisa.config.title=Oversized Item In Storage Area Config
-oiisa.config.message.eject=Eject Message
-oiisa.config.message.overheat=Overheat Message
-oiisa.config.message.location=Message Loaction
-oiisa.config.overheat.fire=Overheat Causes Fire
-oiisa.config.message.send=Notify Player
-oiisa.config.yeetitall=YEET IT BOI
-oiisa.config.debug=Debug Messages
-oiisa.config.maxsize=Maximum Size
-oiisa.config.overheat.temp=Overheat Tempature
-oiisa.config.allowed.inventories=Allowed Inventories
+oiisa.config.blocked.slots=Never Checked Slots
+oiisa.config.blocked.items=Always Allowed Items
+
+oiisa.config.debug=Debug Toggle
+oiisa.config.slot.debug=Slot Debug
+oiisa.config.size.debug=Size Debug
+oiisa.config.weight.debug=Weight Debug
+oiisa.config.heat.debug=Heat Debug
+
+oiisa.config.size.message.eject=Size Eject Message
+oiisa.config.size.message.location=Size Message Location
+oiisa.config.size.message.send=Size Notify Player
+oiisa.config.size.yeetitall=Size Dump Everything
+oiisa.config.size.whitelist=Size Whitelist
+oiisa.config.size.max=Maximum Size Allowed
+oiisa.config.size.inventories=Inventories
+oiisa.config.size.inventoryarray=Size Overrides
+
+oiisa.config.weight.message.eject=Weight Eject Message
+oiisa.config.weight.message.location=Weight Message Location
+oiisa.config.weight.message.send=Wight Notify Player
+oiisa.config.weight.yeetitall=Weight Dump Everything
+oiisa.config.weight.light.value=Light Weight Level
+oiisa.config.weight.medium.value=Medium Weight Level
+oiisa.config.weight.heavy.value=Heavy Weight Level
+oiisa.config.weight.inventoryarray=Weight Inventory Limits
+
+oiisa.config.heat.makefire=Overheat Starts Fire
+oiisa.config.heat.message=Overheat Message
+oiisa.config.heat.message.location=Overheat Message Location
+oiisa.config.heat.message.send=Overheat Notify Player
+oiisa.config.heat.temp=Overheat Tempature
