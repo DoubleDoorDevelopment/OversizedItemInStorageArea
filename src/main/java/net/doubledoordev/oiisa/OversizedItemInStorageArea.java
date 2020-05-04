@@ -1,4 +1,4 @@
-package net.doubledoordev;
+package net.doubledoordev.oiisa;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,9 +40,9 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.0.0";
+    public static final String VERSION = "2.0.1";
 
-    private static Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
+    private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
 
     Map<String, Integer> weightMap = new HashMap<>();
     Map<String, Integer> containerSizeOverideMap = new HashMap<>();
