@@ -40,7 +40,7 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.0.1";
+    public static final String VERSION = "2.1.1";
 
     private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
 
@@ -233,13 +233,19 @@ public class OversizedItemInStorageArea
                     switch (CapabilityItemSize.getIItemSize(slot.getStack()).getWeight(itemStack).ordinal())
                     {
                         case 0:
-                            currentWeight = ModConfig.weightLimitOptions.lightItemWeight * itemStack.getCount() + currentWeight;
+                            currentWeight = ModConfig.weightLimitOptions.veryLightItemWeight * itemStack.getCount() + currentWeight;
                             break;
                         case 1:
-                            currentWeight = ModConfig.weightLimitOptions.mediumItemWeight * itemStack.getCount() + currentWeight;
+                            currentWeight = ModConfig.weightLimitOptions.lightItemWeight * itemStack.getCount() + currentWeight;
                             break;
                         case 2:
+                            currentWeight = ModConfig.weightLimitOptions.mediumItemWeight * itemStack.getCount() + currentWeight;
+                            break;
+                        case 3:
                             currentWeight = ModConfig.weightLimitOptions.heavyItemWeight * itemStack.getCount() + currentWeight;
+                            break;
+                        case 4:
+                            currentWeight = ModConfig.weightLimitOptions.veryHeavyItemWeight * itemStack.getCount() + currentWeight;
                     }
                 }
                 else

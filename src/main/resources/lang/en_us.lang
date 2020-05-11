@@ -21,9 +21,11 @@ oiisa.config.weight.message.eject=Weight Eject Message
 oiisa.config.weight.message.location=Weight Message Location
 oiisa.config.weight.message.send=Wight Notify Player
 oiisa.config.weight.yeetitall=Weight Dump Everything
+oiisa.config.weight.very_light.value=Very Light Weight Level
 oiisa.config.weight.light.value=Light Weight Level
 oiisa.config.weight.medium.value=Medium Weight Level
 oiisa.config.weight.heavy.value=Heavy Weight Level
+oiisa.config.weight.very_heavy.value=Very Heavy Weight Level
 oiisa.config.weight.inventoryarray=Weight Inventory Limits
 
 oiisa.config.heat.makefire=Overheat Starts Fire

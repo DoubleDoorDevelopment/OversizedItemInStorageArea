@@ -110,13 +110,6 @@ public class ModConfig
         @Config.LangKey("oiisa.config.size.inventories")
         @Config.Comment("Full Class path names of inventories that are ignored/checked (depends on sizeBlacklist) for oversize items. TURN ON DEBUG TO GET THESE NAMES")
         public String[] sizeContainers = new String[8];
-        @Config.LangKey("oiisa.config.size.inventoryarray")
-        @Config.Comment({"Full Class path names of inventories that are checked for size limits. TURN ON DEBUG TO GET THE NAMES",
-                "Size to start kicking items out of an inventory at. 0 = Tiny, 1 = Very Small, 2 = Small, 3 = Normal, 4 = Large 5 = Very Large, 6 = Huge",
-                "Ignored inventories WILL NOT get checked! Adding them here DOES NOT MAKE THEM BE CHECKED!"
-        })
-
-        public String[] sizeInventoryArray = new String[1];
 
         {
             //TFC containers
@@ -130,6 +123,13 @@ public class ModConfig
             //FTB Utils containers
             sizeContainers[7] = "com.feed_the_beast.ftbutilities.command.InvSeeInventory";
         }
+
+        @Config.LangKey("oiisa.config.size.inventoryarray")
+        @Config.Comment({"Full Class path names of inventories that are checked for size limits. TURN ON DEBUG TO GET THE NAMES",
+                "Size to start kicking items out of an inventory at. 0 = Tiny, 1 = Very Small, 2 = Small, 3 = Normal, 4 = Large 5 = Very Large, 6 = Huge",
+                "Ignored inventories WILL NOT get checked! Adding them here DOES NOT MAKE THEM BE CHECKED!"
+        })
+        public String[] sizeInventoryArray = new String[1];
 
         {
             sizeInventoryArray[0] = "net.dries007.tfc.objects.container.ContainerChestTFC, 3";
@@ -158,9 +158,13 @@ public class ModConfig
         @Config.Comment("Should everything be tossed everywhere if a inventory is found to be over weight?")
         public Boolean weightYeetItAll = true;
 
+        @Config.LangKey("oiisa.config.weight.very_light.value")
+        @Config.Comment("How much a Very Light item weighs. THIS IS PER ITEM, NOT PER STACK!")
+        public int veryLightItemWeight = 1;
+
         @Config.LangKey("oiisa.config.weight.light.value")
         @Config.Comment("How much a Light item weighs. THIS IS PER ITEM, NOT PER STACK!")
-        public int lightItemWeight = 1;
+        public int lightItemWeight = 3;
 
         @Config.LangKey("oiisa.config.weight.medium.value")
         @Config.Comment("How much a Medium item weighs. THIS IS PER ITEM, NOT PER STACK!")
@@ -169,6 +173,10 @@ public class ModConfig
         @Config.LangKey("oiisa.config.weight.heavy.value")
         @Config.Comment("How much a Heavy item weighs. THIS IS PER ITEM, NOT PER STACK!")
         public int heavyItemWeight = 10;
+
+        @Config.LangKey("oiisa.config.weight.very_heavy.value")
+        @Config.Comment("How much a Very Heavy item weighs. THIS IS PER ITEM, NOT PER STACK!")
+        public int veryHeavyItemWeight = 15;
 
         @Config.LangKey("oiisa.config.weight.inventoryarray")
         @Config.Comment({"Full Class path names of inventories that are checked for weight limits. TURN ON DEBUG TO GET THE NAMES",
