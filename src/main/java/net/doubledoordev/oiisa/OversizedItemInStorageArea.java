@@ -40,7 +40,7 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.1.1";
+    public static final String VERSION = "2.1.2";
 
     private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
 
@@ -112,7 +112,7 @@ public class OversizedItemInStorageArea
         cleanSlotList(container, slotClassNameList, slotsToEffect, containerName);
 
         //Look for items that should start fires.
-        checkItemHeat(tracedPos, world, slotsToEffect, player, blockedItemNameList);
+        checkItemHeat(tracedPos, containerName, world, slotsToEffect, player, blockedItemNameList);
 
         // Checks what mode the size list is in.
         if (ModConfig.sizeLimitOptions.sizeWhitelist)
@@ -340,9 +340,10 @@ public class OversizedItemInStorageArea
         return null;
     }
 
-    private void checkItemHeat(BlockPos tracedPos, World world, ArrayList<Slot> slotsToEffect, EntityPlayer player, ArrayList<String> blockedItemNameList)
+    private void checkItemHeat(BlockPos tracedPos, String containerName, World world, ArrayList<Slot> slotsToEffect, EntityPlayer player, ArrayList<String> blockedItemNameList)
     {
-        if (ModConfig.overheatOptions.heatStartsFires)
+        ArrayList<String> disabledInvs = new ArrayList<>(Arrays.asList(ModConfig.overheatOptions.disabledInventories));
+        if (ModConfig.overheatOptions.heatStartsFires && !disabledInvs.contains(containerName))
         {
             //Loop over the slots.
             for (Slot slot : slotsToEffect)

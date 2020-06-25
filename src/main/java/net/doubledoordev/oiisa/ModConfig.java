@@ -218,6 +218,16 @@ public class ModConfig
         @Config.Comment("Temperature that flammable inventories will combust.")
         @Config.RangeInt(min = 0, max = Integer.MAX_VALUE)
         public int heatToStartFire = 600;
+
+        @Config.LangKey("oiisa.config.heat.disabledinventory")
+        @Config.Comment({"Full Class path names of inventories that are checked for size limits. TURN ON DEBUG TO GET THE NAMES",
+                "Ignored inventories WILL NOT get checked! Adding them here DOES NOT MAKE THEM BE CHECKED!"
+        })
+        public String[] disabledInventories = new String[1];
+
+        {
+            disabledInventories[0] = "net.dries007.tfc.objects.container.ContainerBarrel";
+        }
     }
 
     @Mod.EventBusSubscriber
