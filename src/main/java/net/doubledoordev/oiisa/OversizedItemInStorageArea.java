@@ -109,7 +109,7 @@ public class OversizedItemInStorageArea
         int maxSize = ModConfig.sizeLimitOptions.maxSize;
 
         // Removes unwanted entries in the slot list.
-        cleanSlotList(container, slotClassNameList, slotsToEffect, containerName);
+        cleanSlotList(container, slotClassNameList, slotsToEffect, containerName, player);
 
         //Look for items that should start fires.
         checkItemHeat(tracedPos, containerName, world, slotsToEffect, player, blockedItemNameList);
@@ -259,7 +259,7 @@ public class OversizedItemInStorageArea
         return toYeet;
     }
 
-    private void cleanSlotList(Container container, ArrayList<String> slotClassNameList, ArrayList<Slot> slotsToEffect, String containerName)
+    private void cleanSlotList(Container container, ArrayList<String> slotClassNameList, ArrayList<Slot> slotsToEffect, String containerName, EntityPlayer player)
     {
         //Remove this entry if people put it in cause a shit ton of stuff uses this and warn them.
         if (slotClassNameList.remove("net.minecraft.inventory.InventoryBasic"))
@@ -283,8 +283,9 @@ public class OversizedItemInStorageArea
                 log.info(slot.inventory.getClass());
             }
 
-            //If the blacklist list doesn't contain this slot class, we want to add it to the list of things to be burned or yeeted.
-            if (!slotClassNameList.contains(slot.inventory.getClass().getName()))
+            //If the blacklist list doesn't contain this slot class and the slot can have items taken
+            // we want to add it to the list of things to be burned or yeeted.
+            if (!slotClassNameList.contains(slot.inventory.getClass().getName()) && slot.canTakeStack(player))
                 slotsToEffect.add(slot);
         }
     }
