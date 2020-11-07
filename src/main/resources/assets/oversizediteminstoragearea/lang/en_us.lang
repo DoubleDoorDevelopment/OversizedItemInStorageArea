@@ -1,3 +1,5 @@
+death.attack.oiisaincinerator=%1$s turned to ash :(
+
 oiisa.config.title=Oversized Item In Storage Area Config
 oiisa.config.blocked.slots=Never Checked Slots
 oiisa.config.blocked.items=Always Allowed Items
@@ -33,3 +35,8 @@ oiisa.config.heat.message=Overheat Message
 oiisa.config.heat.message.location=Overheat Message Location
 oiisa.config.heat.message.send=Overheat Notify Player
 oiisa.config.heat.temp=Overheat Tempature
+oiisa.config.heat.incinerateplayer=Incinerate Player Tempature
+oiisa.config.heat.burnplayer=Burn Player Tempature
+oiisa.config.heat.incineratedestroysitems=Incinerate Destroys Items
+oiisa.config.heat.incineratedplayerstartsfire=Incinerated Player Starts Fire
+oiisa.config.heat.incinerateitemstoash=Incinerate Items to Ash

@@ -220,13 +220,31 @@ public class ModConfig
         public int heatToStartFire = 600;
 
         @Config.LangKey("oiisa.config.heat.disabledinventory")
-        @Config.Comment({"Full Class path names of inventories that are checked for size limits. TURN ON DEBUG TO GET THE NAMES",
-                "Ignored inventories WILL NOT get checked! Adding them here DOES NOT MAKE THEM BE CHECKED!"
+        @Config.Comment({"Full Class path names of inventories that are immune to burning. TURN ON DEBUG TO GET THE NAMES"
         })
-        public String[] disabledInventories = new String[1];
+        public String[] disabledInventories = new String[2];
+        @Config.LangKey("oiisa.config.heat.incinerateplayer")
+        @Config.Comment("Temperature that players will instantly die with equipped hot armor equipped.")
+        @Config.RangeInt(min = 0, max = Integer.MAX_VALUE)
+        public int heatToIncineratePlayer = 150;
+        @Config.LangKey("oiisa.config.heat.burnplayer")
+        @Config.Comment("Temperature that players will instantly combust with hot armor equipped.")
+        @Config.RangeInt(min = 0, max = Integer.MAX_VALUE)
+        public int heatToCombustPlayer = 70;
+        @Config.LangKey("oiisa.config.heat.incineratedestroysitems")
+        @Config.Comment({"Does a player incinerating there self destroy burnable items they have in there inventory?",
+                "You can add custom options by giving items fuel time via other mods. Anything greater than 0 will combust."})
+        public boolean incinerateHeldBurnableItems = true;
+        @Config.LangKey("oiisa.config.heat.incineratedplayerstartsfire")
+        @Config.Comment({"Does a player dying from incinerating there self start a fire where they stand?"})
+        public boolean incineratedPlayersStartFires = true;
+        @Config.LangKey("oiisa.config.heat.incinerateitemstoash")
+        @Config.Comment({"Should burnt items be converted to ash at a 1 to 1 ratio?"})
+        public boolean incinerateitemstoash = true;
 
         {
             disabledInventories[0] = "net.dries007.tfc.objects.container.ContainerBarrel";
+            disabledInventories[1] = "net.dries007.tfc.objects.container.ContainerFirePit";
         }
     }
 

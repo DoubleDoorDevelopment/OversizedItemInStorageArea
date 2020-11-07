@@ -15,6 +15,12 @@ import net.minecraft.init.Blocks;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import net.minecraft.tileentity.TileEntityFurnace;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.TextComponentString;
@@ -24,11 +30,14 @@ import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import net.dries007.tfc.api.capability.heat.CapabilityItemHeat;
 import net.dries007.tfc.api.capability.heat.IItemHeat;
 import net.dries007.tfc.api.capability.size.CapabilityItemSize;
 import net.dries007.tfc.util.Helpers;
+
+import static net.dries007.tfc.objects.items.ItemsTFC.WOOD_ASH;
 
 @Mod(
         modid = OversizedItemInStorageArea.MOD_ID,
@@ -40,9 +49,11 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.1.2";
+    public static final String VERSION = "2.2.0";
 
     private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
+
+    DamageSource playerIncinerator = new DamageSource("oiisaincinerator").setDamageBypassesArmor().setDamageIsAbsolute();
 
     Map<String, Integer> weightMap = new HashMap<>();
     Map<String, Integer> containerSizeOverideMap = new HashMap<>();
@@ -89,6 +100,13 @@ public class OversizedItemInStorageArea
                 }
             }
         }
+    }
+
+    @SubscribeEvent
+    public void playerTick(TickEvent.PlayerTickEvent event)
+    {
+        if (event.phase == TickEvent.Phase.END)
+            incineratePlayer(event.player);
     }
 
     @SubscribeEvent
@@ -378,6 +396,115 @@ public class OversizedItemInStorageArea
                             {
                                 log.info("Fire was aborted as this block can't burn.");
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void incineratePlayer(EntityPlayer player)
+    {
+        if (!player.isCreative() && !player.isSpectator())
+        {
+            NonNullList<ItemStack> playerMainInv = player.inventory.mainInventory;
+            NonNullList<ItemStack> playerArmorInv = player.inventory.armorInventory;
+            NonNullList<ItemStack> playerOffHandInv = player.inventory.offHandInventory;
+            World world = player.getEntityWorld();
+            BlockPos playerPos = player.getPosition();
+            String playerDisplayName = player.getDisplayName().getFormattedText();
+
+            ArrayList<ItemStack> ashToSpawn = new ArrayList<>();
+
+            for (ItemStack item : playerArmorInv)
+            {
+                //If the stack has a heat capability and isn't on the ignore list we can get the cap off the item and check the heat.
+                if (item.hasCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null))
+                {
+                    IItemHeat heatCapability = item.getCapability(CapabilityItemHeat.ITEM_HEAT_CAPABILITY, null);
+
+                    //Make sure it's not null.
+                    if (heatCapability != null)
+                    {
+                        float itemTemp = heatCapability.getTemperature();
+                        //First check for incineration as it's the higher value (or should be)...
+                        if (itemTemp >= ModConfig.overheatOptions.heatToIncineratePlayer)
+                        {
+                            //Check each inventory to incinerate items based off if they have a furnace fuel value.
+                            if (ModConfig.overheatOptions.incinerateHeldBurnableItems)
+                            {
+                                for (ItemStack stack : playerMainInv)
+                                {
+                                    if (TileEntityFurnace.getItemBurnTime(stack) > 0)
+                                    {
+                                        if (ModConfig.overheatOptions.incinerateitemstoash)
+                                        {
+                                            ItemStack insultingAsh = new ItemStack(WOOD_ASH, stack.getCount());
+                                            insultingAsh.setStackDisplayName("\u00a7r\u00a78" + stack.getDisplayName() + " Ash");
+                                            ashToSpawn.add(insultingAsh);
+                                        }
+                                        stack.setCount(0);
+                                    }
+                                }
+                                for (ItemStack stack : playerOffHandInv)
+                                {
+                                    if (TileEntityFurnace.getItemBurnTime(stack) > 0)
+                                    {
+                                        if (ModConfig.overheatOptions.incinerateitemstoash)
+                                        {
+                                            ItemStack insultingAsh = new ItemStack(WOOD_ASH, stack.getCount());
+                                            insultingAsh.setStackDisplayName("\u00a7r\u00a78" + stack.getDisplayName() + " Ash");
+                                            ashToSpawn.add(insultingAsh);
+                                        }
+                                        stack.setCount(0);
+                                    }
+                                }
+                            }
+
+                            //Check to see if we can place a fire below the player because daum look at that hot... block.
+                            if (ModConfig.overheatOptions.incineratedPlayersStartFires && world.getBlockState(playerPos).getBlock().isReplaceable(world, playerPos))
+                                world.setBlockState(playerPos, Blocks.FIRE.getDefaultState(), 11);
+
+                            //Kill this genius trying to wear a suit of hot.
+                            if (!player.world.isRemote)
+                                player.attackEntityFrom(playerIncinerator, Integer.MAX_VALUE);
+
+                            //Insult that fool
+                            NBTTagCompound insultingAshNBT = new NBTTagCompound();
+                            NBTTagString insultingAshLore = new NBTTagString("All that remains of " + playerDisplayName + "\u00A75\u00A7o... So hot they turned to nothing but ash!");
+                            NBTTagList insultingAshList = new NBTTagList();
+
+                            insultingAshList.appendTag(insultingAshLore);
+                            insultingAshNBT.setTag("display", new NBTTagCompound());
+                            insultingAshNBT.getCompoundTag("display").setTag("Name", new NBTTagString("\u00a78Ash of " + playerDisplayName));
+                            insultingAshNBT.getCompoundTag("display").setTag("Lore", insultingAshList);
+
+                            ItemStack insultingAsh = new ItemStack(WOOD_ASH, 1);
+                            insultingAsh.setTagCompound(insultingAshNBT);
+
+                            EntityItem insultingAshEntity = new EntityItem(world, player.posX, player.posY, player.posZ, insultingAsh);
+                            insultingAshEntity.setDefaultPickupDelay();
+                            insultingAshEntity.setEntityInvulnerable(true);
+
+                            //make sure we only spawn items on the server and then spawn all of them we need.
+                            if (!player.world.isRemote)
+                            {
+                                if (ModConfig.overheatOptions.incinerateitemstoash)
+                                    for (ItemStack ashStack : ashToSpawn)
+                                    {
+                                        EntityItem ashEntity = new EntityItem(world, player.posX, player.posY, player.posZ, ashStack);
+                                        ashEntity.setEntityInvulnerable(true);
+                                        world.spawnEntity(ashEntity);
+                                    }
+
+                                world.spawnEntity(insultingAshEntity);
+                            }
+                        }
+                        //If they aren't hot enough to incinerate :(, Burn them instead! (if they are hot enough)
+                        else if (itemTemp >= ModConfig.overheatOptions.heatToCombustPlayer)
+                        {
+                            //Make with the hots.
+                            player.setFire((int) (heatCapability.getTemperature() - ModConfig.overheatOptions.heatToIncineratePlayer));
                         }
                     }
                 }
