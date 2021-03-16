@@ -49,7 +49,7 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.2.0";
+    public static final String VERSION = "2.2.1";
 
     private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
 
@@ -514,18 +514,39 @@ public class OversizedItemInStorageArea
 
     private void spawnYeetItem(World world, BlockPos pos, ItemStack item)
     {
-        float f = world.rand.nextFloat() * 0.8F + 0.1F;
-        float f1 = world.rand.nextFloat() * 0.8F + 0.1F;
-        float f2 = world.rand.nextFloat() * 0.8F + 0.1F;
-        // the item to be spawned and thrown
-        EntityItem entityitem = new EntityItem(world, pos.getX() + (double) f, pos.getY() + (double) f1, pos.getZ() + (double) f2, item.splitStack(world.rand.nextInt(21) + 10));
-        //set a delay so the player doesn't instantly collect it if they are in the way
-        entityitem.setPickupDelay(30);
-        //Set the motion on the item
-        entityitem.motionX = world.rand.nextGaussian() * 0.07D;
-        entityitem.motionY = world.rand.nextGaussian() * 0.07D + 0.20000000298023224D;
-        entityitem.motionZ = world.rand.nextGaussian() * 0.07D;
-        // Spawn the entity with the constructed Entityitem.
-        world.spawnEntity(entityitem);
+        float extraX = world.rand.nextFloat() * 0.8F + 0.3F;
+        float extraY = world.rand.nextFloat() * 0.8F + 0.3F;
+        float extraZ = world.rand.nextFloat() * 0.8F + 0.3F;
+        int stackSize = item.getCount();
+        ArrayList<ItemStack> stacksToSpawn = new ArrayList<>();
+
+        while (stackSize > 0)
+        {
+            int shrinkBy = world.rand.nextInt(5);
+            if (stackSize > shrinkBy)
+            {
+                stacksToSpawn.add(item.splitStack(shrinkBy));
+                stackSize = stackSize - shrinkBy;
+            }
+            else
+            {
+                stacksToSpawn.add(item.splitStack(stackSize));
+                stackSize = 0;
+            }
+        }
+
+        for (ItemStack stack : stacksToSpawn)
+        {
+            // the item to be spawned and thrown
+            EntityItem entityitem = new EntityItem(world, pos.getX() + (double) extraX, pos.getY() + (double) extraY, pos.getZ() + (double) extraZ, stack);
+            //set a delay so the player doesn't instantly collect it if they are in the way
+            entityitem.setPickupDelay(30);
+            //Set the motion on the item
+            entityitem.motionX = world.rand.nextGaussian() * 0.27D;
+            entityitem.motionY = world.rand.nextGaussian() * 0.27D + 0.20000000298023224D;
+            entityitem.motionZ = world.rand.nextGaussian() * 0.27D;
+            // Spawn the entity with the constructed Entityitem.
+            world.spawnEntity(entityitem);
+        }
     }
 }
