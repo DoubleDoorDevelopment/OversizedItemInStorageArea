@@ -49,7 +49,7 @@ public class OversizedItemInStorageArea
 
     public static final String MOD_ID = "oversizediteminstoragearea";
     public static final String MOD_NAME = "OversizedItemInStorageArea";
-    public static final String VERSION = "2.2.1";
+    public static final String VERSION = "2.2.2";
 
     private static final Pattern splitter = Pattern.compile("\\b([A-Za-z0-9:._\\s]+)");
 
@@ -125,6 +125,10 @@ public class OversizedItemInStorageArea
         ArrayList<String> blockedItemNameList = new ArrayList<>(Arrays.asList(ModConfig.ignoredItems));
         ArrayList<Slot> slotsToEffect = new ArrayList<>();
         int maxSize = ModConfig.sizeLimitOptions.maxSize;
+
+        //Specialty handling of the smol vessel due to something eating preservation statuses on food items.
+        if (event.getContainer().getClass().getName().equals("net.dries007.tfc.objects.container.ContainerSmallVessel"))
+            return;
 
         // Removes unwanted entries in the slot list.
         cleanSlotList(container, slotClassNameList, slotsToEffect, containerName, player);
